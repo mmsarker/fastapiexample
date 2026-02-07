@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Depends
+from fastapi import FastAPI, Depends, HTTPException
 from sqlalchemy.orm import Session
 from database import SessionLocal, engine, Base
 import models
@@ -17,11 +17,35 @@ def get_db():
         db.close()
 
 
-@app.post("/users")
-def create(user: schemas.UserCreate, db: Session = Depends(get_db)):
+@app.post("/users", response_model=schemas.UserOut)
+def create_user(user: schemas.UserCreate, db: Session = Depends(get_db)):
     return crud.create_user(db, user)
 
 
-@app.get("/users")
-def read(db: Session = Depends(get_db)):
+@app.get("/users", response_model=list[schemas.UserOut])
+def read_users(db: Session = Depends(get_db)):
     return crud.get_users(db)
+
+
+@app.get("/users/{user_id}", response_model=schemas.UserOut)
+def read_user(user_id: int, db: Session = Depends(get_db)):
+    user = crud.get_user(db, user_id)
+    if not user:
+        raise HTTPException(404, "User not found")
+    return user
+
+
+@app.put("/users/{user_id}", response_model=schemas.UserOut)
+def update_user(user_id: int, data: schemas.UserUpdate, db: Session = Depends(get_db)):
+    user = crud.update_user(db, user_id, data)
+    if not user:
+        raise HTTPException(404, "User not found")
+    return user
+
+
+@app.delete("/users/{user_id}")
+def delete_user(user_id: int, db: Session = Depends(get_db)):
+    user = crud.delete_user(db, user_id)
+    if not user:
+        raise HTTPException(404, "User not found")
+    return {"message": "User deleted successfully"}
